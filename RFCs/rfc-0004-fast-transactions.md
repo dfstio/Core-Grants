@@ -265,9 +265,9 @@ const transaction3 = await Mina.transaction(
 - **Stage 6**: Testing on Berkeley/TestWorld/Lightnet
 - **Stage 7**: Integration to the mainnet
 - **Stage 8**: Developing additional features not included in previous stages and improving performance:
-- add parallel optimizations
-- integration with light node
-- integration with a cloud proof computing service
+  - add parallel optimizations
+  - integration with light node
+  - integration with a cloud proof computing service
 
 ## Feasible minimum time between transactions
 
@@ -275,7 +275,7 @@ Let’s consider several scenarios to define the minimum feasible time between t
 
 - **Usual heavy** SmartContract needs approximately 30 seconds to calculate the proof. In the current scenario, sending several transactions in raw will spend 30 seconds calculating the proof and 150 seconds (3 minutes - 30 seconds) waiting for the block. With blockspace, it will be able to send 5-6 transactions per block with 1-second minimum transaction interval and 4-5 transactions with 10 seconds minimum interval, which is 20% difference
 
-- ** Usual Minimum** [SmartContract](https://github.com/dfstio/minanft-lib/blob/rfc4/experimental/rfc.nonce.test.ts) spends about 10 seconds to calculate the proof and send the [transactions toTestWorld2](https://minascan.io/testworld/account/B62qryiea4rVrTCuSaUXNxebVtj7NUQgUWMi1WV9t91YDESXj2wa2ka/zkApp?type=zk-acc). It will be able to send 16 transactions per block with a 1-second minimum transaction interval and 9 transactions with 10-second minimum interval; it is a 77% difference
+- **Usual Minimum** [SmartContract](https://github.com/dfstio/minanft-lib/blob/rfc4/experimental/rfc.nonce.test.ts) spends about 10 seconds to calculate the proof and send the [transactions toTestWorld2](https://minascan.io/testworld/account/B62qryiea4rVrTCuSaUXNxebVtj7NUQgUWMi1WV9t91YDESXj2wa2ka/zkApp?type=zk-acc). It will be able to send 16 transactions per block with a 1-second minimum transaction interval and 9 transactions with 10-second minimum interval; it is a 77% difference
 
 - **Advanced** RealTimeVoting SmartContract that calculates proofs in parallel for the purposes of the real-time voting (example code: [jest test](https://github.com/dfstio/minanft-lib/blob/rfc4/experimental/rfc.api.test.ts) and [backend code](https://github.com/dfstio/minanft-api/blob/rfc4/src/api/rfc4.ts)) can calculate 128 proofs in 166 seconds (1.3 seconds per proof) and can [send transactions](https://minascan.io/testworld/account/B62qibzrmvWg3M7BS7aVzfvTZgjqTrsTnXEcaFCF1ZK9Q9yvbNRTEVC/zkApp?type=zk-acc) to TestWorld2 using 0.65 seconds per transaction:
 
