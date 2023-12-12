@@ -5,6 +5,8 @@
 - **Date**: Thursday, December 07, 2023 as amended on Tuesday, December 12, 2023
 - **Requires**: Changes to the o1js library and Mina protocol node
 
+![Simple example](https://docs.minanft.io/rfc4/second.png)
+
 ## Abstract
 
 The speed and cost of sending the transactions to the blockchain are of utmost importance to end users, organizations, and developers and significantly impact the adoption of the blockchain technology and Total Value Locked in the blockchain.
@@ -41,12 +43,15 @@ The end customers hardly know and do not care what is under the hood, but they d
 
 You can see how Tron TRC-20 tokens took the leading role in money transactions mainly because the transfers are fast and cheap, and Tron TVL is now 4 times higher than Polygon TVL, notwithstanding the fact of $2B investments into Polygon and many advanced ZK technologies integrated into Polygon.
 
+![Simple example](https://docs.minanft.io/rfc4/speed.png)
+
 It applies to all types of applications. The attention span of the people now is 8 seconds, and being able to deliver the result within those 8 seconds leads to a conversion rate increase for zkApp. If the result is delivered after 8 seconds, many people have already forgotten what they would be doing and switched their attention to the next thing.
 
 The integration of blockchain technology poses a significant challenge for most enterprises and government bodies, primarily due to a lack of expertise in building and managing blockchain systems. This gap hinders the widespread adoption and utilization of blockchain's potential and shows the need for tools that allow for easy integration into existing business workflows while maintaining business transaction processing speed on par with the existing systems.
 
 Looking at the rollup market, we will see that 80% of it uses optimistic rollup technology. One of the factors why this technology is being chosen by market participants is the speed.
-[INSERT TABLE}
+
+![Simple example](https://docs.minanft.io/rfc4/market.png)
 
 The developers want to satisfy the customers first, so the motivation described above is paramount for them.
 They have a wide range of tools available to them, and one of the tools they have used in recent years, as I see from my experience, is not to use the blockchain at all and base the design on old architecture to meet their business objectives, so the first factor we are speaking about is the adoption of the blockchain technology.
@@ -61,7 +66,10 @@ The other tools as L2, recursive proofs, Actions/Reducer are available for them,
 
 Actions/Reducer is easy to use and does not require external infrastructure and additional cost, but you cannot update Merkle Map with it. According to the Mina documentation, “because multiple actions are handled concurrently in an undefined order, it is important that actions commute against any possible state to prevent race conditions in your zkApp”.
 
-Therefore, it is possible to use operations like sum and multiply to calculate the new state, but you cannot prove the change of the Merkle Map root that is stored in one of eight state Fields as the root depends upon the order of the inserts into the Merkle Map. On the other hand, you cannot reconstruct the Merkle Map in the reduce(). To do this, the information on all the elements of the Merkle Map is needed, and this information is stored off-chain.
+Therefore, it is possible to use operations like sum and multiply to calculate the new state, but you cannot prove the change of the Merkle Map root that is stored in one of eight state Fields as the root depends upon the order of the inserts into the Merkle Map. On the other hand, you cannot reconstruct the Merkle Map in the reduce().
+
+To do this, the information on all the elements of the Merkle Map is needed, and this information is stored off-chain.
+
 Although changes can be made in the Actions and Reducer mechanism, such as having the same order of actions provided by the archive node and provided to the reducer during on-chain calculation or allowing to provide arguments to the reducer to use additional information and proofs during reduce() call, this discussion is out of scope of the current RFC.
 
 Recursive proofs are very powerful but require a significant CPU and memory. Fast calculation and merging of even 32 proofs in a reasonable time requires the computer to have the parameters that exist only in a cloud/server environment. Setting up such an environment is difficult for the developer who just came to the ecosystem.
@@ -95,19 +103,36 @@ These methods, especially recursive proofs, pose significant entry barriers due 
 
 Blockspace is an ephermal L2 blockchain run inside the L1 BlockSpace node with a lifetime span comparable to the time between L1 blocks. At the end of its lifetime, this ephermal L2 blockchain transfers all the state to the L1 and disappears to be born again when needed by zkApp.
 
+![Simple example](https://docs.minanft.io/rfc4/teddy.png)
+
 From the [Robert Habermeier blog](https://www.rob.tech/blog/polkadot-blockspace-over-blockchains/) :
 
 “Blockspace is an ephemeral good. When you intend to commit an operation to a chain you need blockspace in-the-moment: not yesterday’s, not tomorrow’s. Blockspace is either utilized or it is not.
+
 One parallel for thinking about the design of blockspace allocation products is the cloud computing market. Cloud computing business models often have two key features: reserved instances and spot instances. Reserved instances are cheaper but guaranteed for a prolonged period of time. Spot instances are more costly, available on-demand, and ephemeral.
+
 Furthermore, by changing our perspective from blockchain-centric to blockspace-centric it becomes clear that there is no reason a blockchain or state machine should run forever. **Ephemeral blockchains are an interesting use-case I believe is highly under-explored - longer running processes should be able to offload their computations or protocols to short-lived chains just like programs running on a PC can offload computations or work to background threads**.
-In my opinion, the blockchain ecosystem has been thinking too small about the multi-chain world. Blockchains that start and run indefinitely with a steady pulse are an evidently inefficient mechanism. **The multi-chain of tomorrow consists of blockchains that scale and shrink on demand. It contains ephemeral chains spawned by on-chain factories, spun up by contracts and imbued with automated purpose - to complete their work a few hours later and disappear.** Our goal in Web3 is not to maximize the number of blockchains. Maximizing the number of blockchains is something I would state explicitly as a non-goal, as it primarily benefits validator cartels seeking to extract value. Our goal in Web3 is to maximize the amount of blockspace that exists and ensure it is allocated to the state machines which need it most at any time: a constant generation and allocation of global consensus resources to those who need it the most. An enterprise without waste. In other words: the most effective blockspace producer in the world.”
+
+In my opinion, the blockchain ecosystem has been thinking too small about the multi-chain world. Blockchains that start and run indefinitely with a steady pulse are an evidently inefficient mechanism. **The multi-chain of tomorrow consists of blockchains that scale and shrink on demand. It contains ephemeral chains spawned by on-chain factories, spun up by contracts and imbued with automated purpose - to complete their work a few hours later and disappear.**
+
+Our goal in Web3 is not to maximize the number of blockchains. Maximizing the number of blockchains is something I would state explicitly as a non-goal, as it primarily benefits validator cartels seeking to extract value. Our goal in Web3 is to maximize the amount of blockspace that exists and ensure it is allocated to the state machines which need it most at any time: a constant generation and allocation of global consensus resources to those who need it the most. An enterprise without waste. In other words: the most effective blockspace producer in the world.”
 
 ### BlockSpace Node
 
-BlockSpace Node is a node that, in addition to the usual services of the Mina protocol node, provides the services for running blockspace - an L2 epithermal blockchain. It is up to the node to decide whether it wants to run the blockspace service, whether it is being provided to every zkApp or just to the zkApps whitelisted by this specific node, and what the fees are for running blockspace services. Since the transaction replacement mechanism is used to update the blockspace state, BlockSpace Node can set the minimum fee increase for the replacement transaction, thus being reimbursed for additional computational and storage resources necessary to run the blockspace service.
-Every zkApp can use only one node as a BlockSpace Node and should send all the transactions exclusively through this node. To switch to another BlockSpace/Non-BlockSpace Node, the blockspace should be committed to the L1 and closed. Although it is possible to use other nodes to get information about the blockspace state, this design pattern is not recommended as it increases the load for the inter-node communication that does not have enough resources to support many blockspace state changes of the different zkApps.
+BlockSpace Node is a node that, in addition to the usual services of the Mina protocol node, provides the services for running blockspace - an L2 epithermal blockchain. It is up to the node to decide whether it wants to run the blockspace service, whether it is being provided to every zkApp or just to the zkApps whitelisted by this specific node, and what the fees are for running blockspace services.
+
+Since the transaction replacement mechanism is used to update the blockspace state, BlockSpace Node can set the minimum fee increase for the replacement transaction, thus being reimbursed for additional computational and storage resources necessary to run the blockspace service.
+
+Every zkApp can use only one node as a BlockSpace Node and should send all the transactions exclusively through this node. To switch to another BlockSpace/Non-BlockSpace Node, the blockspace should be committed to the L1 and closed.
+
+Although it is possible to use other nodes to get information about the blockspace state, this design pattern is not recommended as it increases the load for the inter-node communication that does not have enough resources to support many blockspace state changes of the different zkApps.
+
 The BlockSpace Node provides sequencer services to the zkApp by putting the transactions that have arrived simultaneously in order and deciding what transaction to accept and what to refuse in case two transactions referring to the same guaranteed state arrived simultaneously.
+
+![Simple example](https://docs.minanft.io/rfc4/node.png)
+
 Some use cases where you can send many transactions in the same block are already possible without this RFC. You can now calculate recursive proofs with ZkProgram and include many proofs in one block. You can send many non-contract transactions or contract transactions not relying on the precondition state by increasing the nonce by one each time, and all those transactions will be included in the same block.
+
 What is different with SmartContract is that the precondition is checked to include the transaction to the block. This precondition is now checked against the last block account state, so you cannot include several transactions that rely on different precondition states, you should wait for the next block. That is why we need a guaranteed state and a calculated state:
 
 ### The guaranteed state
@@ -120,32 +145,41 @@ Still, there is a technical possibility for zkApp to replace the transaction wit
 
 If we formulate what a guaranteed state means in the contract terms, it will lead us to the following wording:
 
-**Terms of the State Guarantee Contract**
+### **Terms of the State Guarantee Contract**
 
-**Guarantee Issuer**: BlockSpace Node
-**Beneficiary**: zkApp
-**Condition Precedent**: zkApp is obliged at all times during the term of this agreement to maintain at its own expense the fee for the transactions that is necessary for avoiding the eviction of the transaction from the mempool and is enough for the inclusion of the transaction in the block during the maximum time that transaction is allowed to be in the mempool.
-**Term**: The time that starts when zkApp sends the transaction to the BlockSpace Node to be committed to the L1 blockchain and ends on the earliest of:
+- **Guarantee Issuer**: BlockSpace Node
 
-- The transaction is included in the L1 block
-- ZkApp calls off the transaction by sending the replacement transaction
-- The transaction is excluded from the mempool due to the low fee or due to the maximum time reached for the transaction to be in the mempool as the result of the violations by zkApp of the Condition Precedent.
-  **Rights of Third Parties**: Third Parties, including, but not limited to, other zkApps and Accounts, are NOT beneficiaries of the State Guarantee Contract and can rely on this guaranteed state only in the optimistic sense by also relying on the architecture of the zkApp and not on this Guarantee. It is recommended for third parties to wait for BlockSpace to commit to the L1 before executing any material transaction that relies on the state, such as asset withdrawal.
-  **Applicable law**: Mina protocol
-  **Arbitrage**: O(1)Labs
-  **SLA**: TBD
+- **Beneficiary**: zkApp
+
+- **Condition Precedent**: zkApp is obliged at all times during the term of this agreement to maintain at its own expense the fee for the transactions that is necessary for avoiding the eviction of the transaction from the mempool and is enough for the inclusion of the transaction in the block during the maximum time that transaction is allowed to be in the mempool.
+
+- **Term**: The time that starts when zkApp sends the transaction to the BlockSpace Node to be committed to the L1 blockchain and ends on the earliest of:
+
+  - The transaction is included in the L1 block
+  - ZkApp calls off the transaction by sending the replacement transaction
+  - The transaction is excluded from the mempool due to the low fee or due to the maximum time reached for the transaction to be in the mempool as the result of the violations by zkApp of the Condition Precedent.
+
+  - **Rights of Third Parties**: Third Parties, including, but not limited to, other zkApps and Accounts, are NOT beneficiaries of the State Guarantee Contract and can rely on this guaranteed state only in the optimistic sense by also relying on the architecture of the zkApp and not on this Guarantee. It is recommended for third parties to wait for BlockSpace to commit to the L1 before executing any material transaction that relies on the state, such as asset withdrawal.
+  - **Applicable law**: Mina protocol
+  - **Arbitrage**: O(1)Labs
+  - **SLA**: TBD
 
 ### The calculated state
 
 zkApp can calculate the state that will be the result of the transaction in a way similar to how Mina.transaction() does (or by using Mina.transaction() without calling transaction.prove())
+
 This calculated state can be used immediately by the zkApp to start creating and proving the next transaction without waiting for the previous transaction.prove() to be finished, enabling parallel proof calculations.
+
 The calculated state is not guaranteed and can be considered simply as one of the variables zkApp uses. To use it, Mina.transaction() arguments have to be amended to accept calculated or guaranteed state to be used as precondition input instead of the default precondition account state returned by fetchAccount() and referring to the last block account state..
 
 ### How it works
 
 **Simple example**: As usual, the zkApp prepares and sends transaction No. 1 to the node. The node checks the transaction and returns a new guaranteed contract state No 1. zkApp uses this state as an argument to Mina.transaction of fetchAccount() to immediately prepare and send another transaction No 2 to the node.
+
 Having received transaction No. 2, the node verifies it by checking the proof and preconditions against the guaranteed state No. 1 and creates a compound transaction that replaces the previous one with the relevant fee increase and the same nonce, returning guaranteed state No. 2
+
 As soon as a new block comes, the new compound transaction, containing compound AccountUpdates reflecting AccountUpdates from transaction No. 1 and transaction No. 2, is included in the block. At this stage, guaranteed state No. 2 is the same as the account state in the last block.
+
 In this example, the node executes the role of the Sequencer and will decide, in case several blockspace transactions arrive, which one should be included and which should be refused immediately.
 
 ![Simple example](https://docs.minanft.io/rfc4/simple.png)
@@ -154,6 +188,8 @@ In this example, the node executes the role of the Sequencer and will decide, in
 By doing so, zkApp is optimistic about the fact that the calculated state will be equal to the guaranteed state and then to the final state. For this optimism to be substantiated, zkApp, in this advanced example, should take a sequencer role and put all the transactions from the users in order and finalize them before sending them to the node.
 It is quite easy in some cases, such as the AccountAbstraction contract or NFT contract, where each NFT is minted as a separate account, and more complicated in other cases, such as multi-user DEX.
 It should be noted that although in this example zkApp takes a sequencer role, the node and blockchain play critical roles by guaranteeing that all transactions are executed in accordance with the program that matches the verification key written to the blockchain, thus ensuring that all rules and contraints are met.
+
+![Simple example](https://docs.minanft.io/rfc4/advanced.png)
 
 ### API example
 
@@ -228,9 +264,11 @@ const transaction3 = await Mina.transaction(
 
 Let’s consider several scenarios to define the minimum feasible time between transactions.
 
-**Usual heavy** SmartContract needs approximately 30 seconds to calculate the proof. In the current scenario, sending several transactions in raw will spend 30 seconds calculating the proof and 150 seconds (3 minutes - 30 seconds) waiting for the block. With blockspace, it will be able to send 5-6 transactions per block with 1-second minimum transaction interval and 4-5 transactions with 10 seconds minimum interval, which is 20% difference
-** Usual Minimum** [SmartContract](https://github.com/dfstio/minanft-lib/blob/rfc4/experimental/rfc.nonce.test.ts) spends about 10 seconds to calculate the proof and send the [transactions toTestWorld2](https://minascan.io/testworld/account/B62qryiea4rVrTCuSaUXNxebVtj7NUQgUWMi1WV9t91YDESXj2wa2ka/zkApp?type=zk-acc). It will be able to send 16 transactions per block with a 1-second minimum transaction interval and 9 transactions with 10-second minimum interval; it is a 77% difference
-**Advanced** SmartContract that calculates proofs in parallel for the purposes of the real-time voting (example code: [jest test](https://github.com/dfstio/minanft-lib/blob/rfc4/experimental/rfc.api.test.ts) and [backend code](https://github.com/dfstio/minanft-api/blob/rfc4/src/api/rfc4.ts)) can calculate 128 proofs in 166 seconds (1.3 seconds per proof) and can [send transactions](https://minascan.io/testworld/account/B62qibzrmvWg3M7BS7aVzfvTZgjqTrsTnXEcaFCF1ZK9Q9yvbNRTEVC/zkApp?type=zk-acc) to TestWorld2 using 0.65 seconds per transaction:
+- **Usual heavy** SmartContract needs approximately 30 seconds to calculate the proof. In the current scenario, sending several transactions in raw will spend 30 seconds calculating the proof and 150 seconds (3 minutes - 30 seconds) waiting for the block. With blockspace, it will be able to send 5-6 transactions per block with 1-second minimum transaction interval and 4-5 transactions with 10 seconds minimum interval, which is 20% difference
+
+- ** Usual Minimum** [SmartContract](https://github.com/dfstio/minanft-lib/blob/rfc4/experimental/rfc.nonce.test.ts) spends about 10 seconds to calculate the proof and send the [transactions toTestWorld2](https://minascan.io/testworld/account/B62qryiea4rVrTCuSaUXNxebVtj7NUQgUWMi1WV9t91YDESXj2wa2ka/zkApp?type=zk-acc). It will be able to send 16 transactions per block with a 1-second minimum transaction interval and 9 transactions with 10-second minimum interval; it is a 77% difference
+
+- **Advanced** SmartContract that calculates proofs in parallel for the purposes of the real-time voting (example code: [jest test](https://github.com/dfstio/minanft-lib/blob/rfc4/experimental/rfc.api.test.ts) and [backend code](https://github.com/dfstio/minanft-api/blob/rfc4/src/api/rfc4.ts)) can calculate 128 proofs in 166 seconds (1.3 seconds per proof) and can [send transactions](https://minascan.io/testworld/account/B62qibzrmvWg3M7BS7aVzfvTZgjqTrsTnXEcaFCF1ZK9Q9yvbNRTEVC/zkApp?type=zk-acc) to TestWorld2 using 0.65 seconds per transaction:
 
 ```
 [10:13:55 PM] Nonce: 330
@@ -253,7 +291,10 @@ Let’s consider several scenarios to define the minimum feasible time between t
 This example RealTimeVoting zkApp has used MinaNFT backend for parallel proof calculation and was able to include 122 zkApp transactions emulating blockspace work in TestWorld2 block 18241:
 https://minascan.io/testworld/block/3NKCH5552TNFAGhCbprddsbSbLwc4YqimqLVjeepY9Hg2Kh9Darf/zk-txs
 
-For this test, the argument to the method emulates the guaranteed state. It also shows that some zkApps can generate and send proofs to the blockchain at the rate of approx. one transaction per second. To calculate the proofs in parallel, zkApp has to calculate in advance the state used as a precondition, which is easy in case the state is the root of the Merkle Tree where elements are being inserted one by one and use this state in Mina.transaction().
+For this test, the argument to the method emulates the guaranteed state. It also shows that some zkApps can generate and send proofs to the blockchain at the rate of approx. one transaction per second.
+
+To calculate the proofs in parallel, zkApp has to calculate in advance the state used as a precondition, which is easy in case the state is the root of the Merkle Tree where elements are being inserted one by one and use this state in Mina.transaction().
+
 This contract can send 138 transactions every 3 minutes with a 1-second minimum transaction interval and 18 transactions with 10 seconds minimum interval, which is a 1280% difference.
 
 Given that we see performance differences for all types of contracts, it is feasible to target the 1-second minimum transaction interval.
@@ -266,7 +307,11 @@ Let’s analyze what can be a lower bound of the interval between transactions. 
 - Proof calculations are slow, but they can be run in parallel.
   The proofs calculations from the RealTimeVoting example above use one sequencer and 128 lambdas calculating proofs. By using 10 or 20 sequencers and increasing the number of lambdas, we can increase the rate of proof calculation from one proof every 1.3 seconds to 1 proof every 0.1 seconds.
 
-State calculations cannot be run in parallel and require in my tests 18.285 s for calculating 128 states, or 0.14 s per state. Therefore, if we account for some overhead, the theoretical minimum interval between transactions in the Mina protocol + blockspace setup can be 0.2 seconds, leading us to a theoretically achievable rate of 5 transactions per second per zkApp. By splitting the contract between several contracts or zkApps, in some cases, it will be theoretically possible to multiply this rate by some coefficient in the range of 2-10, which leads us to a theoretical 10-50 TPS per zkApp group.
+State calculations cannot be run in parallel and require in my tests 18.285 s for calculating 128 states, or 0.14 s per state.
+
+Therefore, if we account for some overhead, the theoretical minimum interval between transactions in the Mina protocol + blockspace setup can be 0.2 seconds, leading us to a theoretically achievable rate of 5 transactions per second per zkApp.
+
+By splitting the contract between several contracts or zkApps, in some cases, it will be theoretically possible to multiply this rate by some coefficient in the range of 2-10, which leads us to a theoretical 10-50 TPS per zkApp group.
 
 **This rate, although hard to achieve in real-life systems due to non-blockchain software, CPU, memory, and network issues, is very important because it is comparable with rates for many non-blockchain software systems and, therefore, having such a high TPS rate eliminates the barrier for Mina blockchain adoption**
 
