@@ -277,7 +277,7 @@ Let’s consider several scenarios to define the minimum feasible time between t
 
 - ** Usual Minimum** [SmartContract](https://github.com/dfstio/minanft-lib/blob/rfc4/experimental/rfc.nonce.test.ts) spends about 10 seconds to calculate the proof and send the [transactions toTestWorld2](https://minascan.io/testworld/account/B62qryiea4rVrTCuSaUXNxebVtj7NUQgUWMi1WV9t91YDESXj2wa2ka/zkApp?type=zk-acc). It will be able to send 16 transactions per block with a 1-second minimum transaction interval and 9 transactions with 10-second minimum interval; it is a 77% difference
 
-- **Advanced** SmartContract that calculates proofs in parallel for the purposes of the real-time voting (example code: [jest test](https://github.com/dfstio/minanft-lib/blob/rfc4/experimental/rfc.api.test.ts) and [backend code](https://github.com/dfstio/minanft-api/blob/rfc4/src/api/rfc4.ts)) can calculate 128 proofs in 166 seconds (1.3 seconds per proof) and can [send transactions](https://minascan.io/testworld/account/B62qibzrmvWg3M7BS7aVzfvTZgjqTrsTnXEcaFCF1ZK9Q9yvbNRTEVC/zkApp?type=zk-acc) to TestWorld2 using 0.65 seconds per transaction:
+- **Advanced** RealTimeVoting SmartContract that calculates proofs in parallel for the purposes of the real-time voting (example code: [jest test](https://github.com/dfstio/minanft-lib/blob/rfc4/experimental/rfc.api.test.ts) and [backend code](https://github.com/dfstio/minanft-api/blob/rfc4/src/api/rfc4.ts)) can calculate 128 proofs in 166 seconds (1.3 seconds per proof) and can [send transactions](https://minascan.io/testworld/account/B62qibzrmvWg3M7BS7aVzfvTZgjqTrsTnXEcaFCF1ZK9Q9yvbNRTEVC/zkApp?type=zk-acc) to TestWorld2 using 0.65 seconds per transaction:
 
 ```
 [10:13:55 PM] Nonce: 330
@@ -337,28 +337,37 @@ Almost any application can benefit from high TPS. The example of such applicatio
 
 ### Scenario 1: High-Frequency Transaction SmartContract
 
-Example: A chess blitz game SmartContract needs several transactions per minute. This feature would enable high-frequency transactions with possible lazy proofs calculation.
+Example: A chess blitz game SmartContract needs several transactions per minute.
 
-### Scenario 2: Multi-User SmartContract Requiring Immediate Final State
+This contract has to calculate the new state almost in real-time, with a very short time between the moves. It is a one-user game, and the contract can use a calculated state that takes 0.2 seconds to calculate.
 
-Example: A multi-user SmartContract that operates on simultaneous requests and requires immediate access to the final state post-transaction. It can use Actions and Reducer to collect user requests, then send a blockspace reduce transaction and receive the final state to be used in the following user's transactions immediately.
+Then, in the background, zkApp can calculate the proofs for each move and send them to the BlockSpace node that is configured to commit the state to L1 in manual mode. As soon as the blitz party is finished and all proofs are calculated, and all transactions are sent to the BlockSpace node, the zkApp issues blockSpace.close() command to commit the compound transaction to the transaction pool and close blockspace.
+
+### Scenario 2: RealTimeVoting SmartContract Requiring Voting Results in real-time.
+
+The RealTimeVoting contract used in the example above is responsible for counting and keeping the public votes at the shareholder’s meeting of the company or at the public hearing in the local municipality.
+
+All the votes have to be inserted into the Merkle Tree, and the root of the Merkle Tree should be kept on the zkApp state. The results are expected to be available immediately.
+
+The zkApp first can do the process of calculating the state as soon as new votes become available by processing them by the zkApp sequencer. All the new transactions are sent immediately for parallel proof calculations, with the delay between the vote arrival and proof readiness being about one minute. The transactions with proofs are then sent in batches to the BlockSpace node to get the guaranteed state.
+
+The delay between the last vote and the guaranteed state reception can be 1-2 minutes in this scenario, with the final state to be included in the L1 block within 3 minutes, total of 3-5 minutes delay for the final state.
 
 ## Open Issues and Discussion Points
 
 - The calculation and verification of any proof takes some time, and the previous transaction can be included in the block at that time, so the replacement transaction will fail. There will be needed a mechanism for automatic increase of the nonce in this case to be able to send this transaction as new or other ways how to handle this situation.
 - To act in the most efficient way, the node should support parallel processing or even running on the cluster. This requirement is optional but recommended for high-performant blockspace.
+- How actions and events should be handled in blockspace. As handling actions and events is not the part of the role of regular node, it should be considered during research phase.
 - Pool and block algorithms must be analyzed during the research phase to find the most efficient way to build and verify compound transactions. Although the most direct way to build compound transactions is putting all AccountUpdates from several transactions, we’re putting too many AccountUpdates as a result into one transaction, and alternative ways should be discovered. This will have an effect on the BlockSpace fee structure, too.
 
 According to the [zkApp MIP 2](https://github.com/bkase/MIPs/blob/66c60c48bc4d0710202f7573765ad526ca74905a/MIPS/mip-zkapps.md)
 
-```
 The size heuristic involves three limits: a limit on the number of field elements in actions, a limit on the number of field elements in events, and a limit on the cost of the account updates. These three limits are fixed numbers in the protocol. The cost of the account updates is calculated from the number of proofs and signatures contained in them, subject to a grouping used to minimize the number of SNARKs needed to prove the transaction. That grouping sometimes pairs signatures as one element contributing to the cost. The number of proofs, signatures, and signature pairs are multiplied by factors determined empirically to yield a valid cost metric.
 
 Proofs inside of account updates are checked when zkApp transactions are added to the transaction pool against some known potential future verification key as described in Mitigation of Attack 2: Verification Key Superposition. When a block is created, the proofs are not re-checked because they were already checked when added to the pool. When a block is received, all checks required to verify that the sender hasn't manipulated the payload are re-verified, but the proof is not explicitly checked in all cases.
 
 Transaction pool
-To keep the transaction pool simple, only fee payers of zkApp transactions are checked for balance and nonce validity. Signatures and proofs of all account updates must be verified before adding a zkApp transaction to the pool. This introduces an additional snark verification step in the transaction pool which until now checked only signatures. After verified in the pool, the proofs are assumed to be valid during block creation and don't require checking again, similar to signatures for signed commands. Proofs within a transaction and across multiple transactions can be batched to make the verification step slightly more efficient. Failing batch verification involves additional verification to identify the faulty proof or transaction and so, worst case each transaction are actually a bit slower. Additionally, hashing zkApp transactions impact the pool's performance. Care should be taken to hash a transaction only once and use it everywhere in the pool and throughout the protocol.
-```
+To keep the transaction pool simple, only fee payers of zkApp transactions are checked for balance and nonce validity. Signatures and proofs of all account updates must be verified before adding a zkApp transaction to the pool. This introduces an additional snark verification step in the transaction pool which until now checked only signatures. **After verified in the pool, the proofs are assumed to be valid during block creation and don't require checking again, similar to signatures for signed commands. Proofs within a transaction and across multiple transactions can be batched to make the verification step slightly more efficient.** Failing batch verification involves additional verification to identify the faulty proof or transaction and so, worst case each transaction are actually a bit slower. Additionally, hashing zkApp transactions impact the pool's performance. Care should be taken to hash a transaction only once and use it everywhere in the pool and throughout the protocol.
 
 ## Conclusion
 
