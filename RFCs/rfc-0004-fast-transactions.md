@@ -5,7 +5,7 @@
 - **Date**: Thursday, December 07, 2023 as amended on Tuesday, December 12, 2023
 - **Requires**: Changes to the o1js library and Mina protocol node
 
-![Simple example](https://docs.minanft.io/rfc4/second.png)
+![Second image](https://docs.minanft.io/rfc4/second.png)
 
 ## Abstract
 
@@ -43,7 +43,7 @@ The end customers hardly know and do not care what is under the hood, but they d
 
 You can see how Tron TRC-20 tokens took the leading role in money transactions mainly because the transfers are fast and cheap, and Tron TVL is now 4 times higher than Polygon TVL, notwithstanding the fact of $2B investments into Polygon and many advanced ZK technologies integrated into Polygon.
 
-![Simple example](https://docs.minanft.io/rfc4/speed.png)
+![Tron TVL table](https://docs.minanft.io/rfc4/speed.png)
 
 It applies to all types of applications. The attention span of the people now is 8 seconds, and being able to deliver the result within those 8 seconds leads to a conversion rate increase for zkApp. If the result is delivered after 8 seconds, many people have already forgotten what they would be doing and switched their attention to the next thing.
 
@@ -51,7 +51,7 @@ The integration of blockchain technology poses a significant challenge for most 
 
 Looking at the rollup market, we will see that 80% of it uses optimistic rollup technology. One of the factors why this technology is being chosen by market participants is the speed.
 
-![Simple example](https://docs.minanft.io/rfc4/market.png)
+![Market](https://docs.minanft.io/rfc4/market.png)
 
 The developers want to satisfy the customers first, so the motivation described above is paramount for them.
 They have a wide range of tools available to them, and one of the tools they have used in recent years, as I see from my experience, is not to use the blockchain at all and base the design on old architecture to meet their business objectives, so the first factor we are speaking about is the adoption of the blockchain technology.
@@ -103,7 +103,7 @@ These methods, especially recursive proofs, pose significant entry barriers due 
 
 Blockspace is an ephermal L2 blockchain run inside the L1 BlockSpace node with a lifetime span comparable to the time between L1 blocks. At the end of its lifetime, this ephermal L2 blockchain transfers all the state to the L1 and disappears to be born again when needed by zkApp.
 
-![Simple example](https://docs.minanft.io/rfc4/teddy.png)
+![L2 drawing](https://docs.minanft.io/rfc4/teddy.png)
 
 From the [Robert Habermeier blog](https://www.rob.tech/blog/polkadot-blockspace-over-blockchains/) :
 
@@ -129,7 +129,7 @@ Although it is possible to use other nodes to get information about the blockspa
 
 The BlockSpace Node provides sequencer services to the zkApp by putting the transactions that have arrived simultaneously in order and deciding what transaction to accept and what to refuse in case two transactions referring to the same guaranteed state arrived simultaneously.
 
-![Simple example](https://docs.minanft.io/rfc4/node.png)
+![Nodes](https://docs.minanft.io/rfc4/node.png)
 
 Some use cases where you can send many transactions in the same block are already possible without this RFC. You can now calculate recursive proofs with ZkProgram and include many proofs in one block. You can send many non-contract transactions or contract transactions not relying on the precondition state by increasing the nonce by one each time, and all those transactions will be included in the same block.
 
@@ -159,10 +159,10 @@ If we formulate what a guaranteed state means in the contract terms, it will lea
   - ZkApp calls off the transaction by sending the replacement transaction
   - The transaction is excluded from the mempool due to the low fee or due to the maximum time reached for the transaction to be in the mempool as the result of the violations by zkApp of the Condition Precedent.
 
-  - **Rights of Third Parties**: Third Parties, including, but not limited to, other zkApps and Accounts, are NOT beneficiaries of the State Guarantee Contract and can rely on this guaranteed state only in the optimistic sense by also relying on the architecture of the zkApp and not on this Guarantee. It is recommended for third parties to wait for BlockSpace to commit to the L1 before executing any material transaction that relies on the state, such as asset withdrawal.
-  - **Applicable law**: Mina protocol
-  - **Arbitrage**: O(1)Labs
-  - **SLA**: TBD
+- **Rights of Third Parties**: Third Parties, including, but not limited to, other zkApps and Accounts, are NOT beneficiaries of the State Guarantee Contract and can rely on this guaranteed state only in the optimistic sense by also relying on the architecture of the zkApp and not on this Guarantee. It is recommended for third parties to wait for BlockSpace to commit to the L1 before executing any material transaction that relies on the state, such as asset withdrawal.
+- **Applicable law**: Mina protocol
+- **Arbitrage**: O(1)Labs
+- **SLA**: TBD
 
 ### The calculated state
 
@@ -172,9 +172,11 @@ This calculated state can be used immediately by the zkApp to start creating and
 
 The calculated state is not guaranteed and can be considered simply as one of the variables zkApp uses. To use it, Mina.transaction() arguments have to be amended to accept calculated or guaranteed state to be used as precondition input instead of the default precondition account state returned by fetchAccount() and referring to the last block account state..
 
-### How it works
+## How it works
 
-**Simple example**: As usual, the zkApp prepares and sends transaction No. 1 to the node. The node checks the transaction and returns a new guaranteed contract state No 1. zkApp uses this state as an argument to Mina.transaction of fetchAccount() to immediately prepare and send another transaction No 2 to the node.
+### **Simple example**
+
+As usual, the zkApp prepares and sends transaction No. 1 to the node. The node checks the transaction and returns a new guaranteed contract state No 1. zkApp uses this state as an argument to Mina.transaction of fetchAccount() to immediately prepare and send another transaction No 2 to the node.
 
 Having received transaction No. 2, the node verifies it by checking the proof and preconditions against the guaranteed state No. 1 and creates a compound transaction that replaces the previous one with the relevant fee increase and the same nonce, returning guaranteed state No. 2
 
@@ -184,12 +186,19 @@ In this example, the node executes the role of the Sequencer and will decide, in
 
 ![Simple example](https://docs.minanft.io/rfc4/simple.png)
 
-**Advanced example**: zkApp, instead of waiting for the guaranteed state, can calculate it and use it to create new transactions even before tx.prove() finishes working. It will allow zkApp to calculate in parallel many proofs.
-By doing so, zkApp is optimistic about the fact that the calculated state will be equal to the guaranteed state and then to the final state. For this optimism to be substantiated, zkApp, in this advanced example, should take a sequencer role and put all the transactions from the users in order and finalize them before sending them to the node.
+### **Advanced example**
+
+zkApp, instead of waiting for the guaranteed state, can calculate it and use it to create new transactions even before tx.prove() finishes working. It will allow zkApp to calculate in parallel many proofs.
+
+By doing so, zkApp is optimistic about the fact that the calculated state will be equal to the guaranteed state and then to the final state.
+
+For this optimism to be substantiated, zkApp, in this advanced example, should take a sequencer role and put all the transactions from the users in order and finalize them before sending them to the node.
+
 It is quite easy in some cases, such as the AccountAbstraction contract or NFT contract, where each NFT is minted as a separate account, and more complicated in other cases, such as multi-user DEX.
+
 It should be noted that although in this example zkApp takes a sequencer role, the node and blockchain play critical roles by guaranteeing that all transactions are executed in accordance with the program that matches the verification key written to the blockchain, thus ensuring that all rules and contraints are met.
 
-![Simple example](https://docs.minanft.io/rfc4/advanced.png)
+![Advanced example](https://docs.minanft.io/rfc4/advanced.png)
 
 ### API example
 
