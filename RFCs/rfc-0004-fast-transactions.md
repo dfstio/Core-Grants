@@ -62,17 +62,18 @@ The other tools as L2, recursive proofs, Actions/Reducer are available for them,
 - Ability to meet the objectives
 - Cost
 - SLA levels
-  In this sense, all those solutions are complementary.
+
+All those solutions are complementary.
 
 Actions/Reducer is easy to use and does not require external infrastructure and additional cost, but you cannot update Merkle Map with it. According to the Mina documentation, “because multiple actions are handled concurrently in an undefined order, it is important that actions commute against any possible state to prevent race conditions in your zkApp”.
 
-Therefore, it is possible to use operations like sum and multiply to calculate the new state, but you cannot prove the change of the Merkle Map root that is stored in one of eight state Fields as the root depends upon the order of the inserts into the Merkle Map. On the other hand, you cannot reconstruct the Merkle Map in the reduce().
+Therefore, it is possible to use operations like sum and multiply to calculate the new state, but you cannot prove the change of the Merkle Map root that is stored in one of eight state Fields as the root depends upon the order of the inserts into the Merkle Map. If previous inserts differ, the root will be different.
 
-To do this, the information on all the elements of the Merkle Map is needed, and this information is stored off-chain.
+On the other hand, you cannot reconstruct the Merkle Map in the reduce(). To do this, the information on all the elements of the Merkle Map is needed, and this information is stored off-chain.
 
 Although changes can be made in the Actions and Reducer mechanism, such as having the same order of actions provided by the archive node and provided to the reducer during on-chain calculation or allowing to provide arguments to the reducer to use additional information and proofs during reduce() call, this discussion is out of scope of the current RFC.
 
-Recursive proofs are very powerful but require a significant CPU and memory. Fast calculation and merging of even 32 proofs in a reasonable time requires the computer to have the parameters that exist only in a cloud/server environment. Setting up such an environment is difficult for the developer who just came to the ecosystem.
+Recursive proofs are very powerful but require a significant CPU and memory. Fast calculation and merging of even 32 proofs in a reasonable time requires the computer to have the parameters that exist only in a cloud/server environment. Setting up such an environment is difficult for the developer who just came to the ecosystem. It can be solved by providing a cloud proof calculation service in the Mina ecosystem.
 
 L2 is probably the best solution, but the questions of data availability, messaging, and asset transfer between L1 and L2 always complicate the development. Still, non-ephermal L2 can be the best choice for many use cases.
 
@@ -83,11 +84,11 @@ Many corporate developers also want to implement a solution quickly without inte
 Mina Protocol's SmartContract transactions, authenticated through proof, must meet these criteria:
 
 - Matching account update preconditions with the current account state.
-- Proof verification against the SmartContract's verification key.
+- Proof verification against the SmartContract's verification key written to the account state.
 - Fee alignment with the market rate for the next block to not be evicted from mempool or wait a long time for the inclusion in the block
-- There should not be other transactions that will replace or will be selected by the node instead of this one.
+- There should not be other transactions that will replace or will be selected by the node instead of this one till the inclusion in the block time.
 
-Once verified, the transaction's inclusion in the block is assured, bypassing the need for blockchain-wide recalculations. Despite a known post-verification state, SmartContracts must wait about 3 minutes for state reflection in the new block before initiating another transaction.
+Once conditions are met, the transaction's inclusion in the block is assured, bypassing the need for blockchain-wide recalculations. Despite a known post-verification state, SmartContracts must wait about 3 minutes for state reflection in the new block before initiating another transaction.
 
 Current approaches to multiple transactions within a block include:
 
@@ -170,7 +171,9 @@ zkApp can calculate the state that will be the result of the transaction in a wa
 
 This calculated state can be used immediately by the zkApp to start creating and proving the next transaction without waiting for the previous transaction.prove() to be finished, enabling parallel proof calculations.
 
-The calculated state is not guaranteed and can be considered simply as one of the variables zkApp uses. To use it, Mina.transaction() arguments have to be amended to accept calculated or guaranteed state to be used as precondition input instead of the default precondition account state returned by fetchAccount() and referring to the last block account state..
+The calculated state is not guaranteed and can be considered simply as one of the variables zkApp uses. To use it, Mina.transaction() arguments have to be amended to accept calculated or guaranteed state to be used as precondition input instead of the default precondition account state returned by fetchAccount() and referring to the last block account state.
+
+The calculated state will become a guaranteed state in an optimistic sense and, later, a final state in an optimistic sense.
 
 ## How it works
 
@@ -247,7 +250,7 @@ const transaction3 = await Mina.transaction(
   }
   await transaction3.prove();
   await transaction3.sign(...).send();
-  await blockspaceOptions.close(); // commit and close block space
+  await blockSpace.close(); // commit and close blockspace
 ```
 
 ### Implementation
@@ -320,9 +323,9 @@ State calculations cannot be run in parallel and require in my tests 18.285 s fo
 
 Therefore, if we account for some overhead, the theoretical minimum interval between transactions in the Mina protocol + blockspace setup can be 0.2 seconds, leading us to a theoretically achievable rate of 5 transactions per second per zkApp.
 
-By splitting the contract between several contracts or zkApps, in some cases, it will be theoretically possible to multiply this rate by some coefficient in the range of 2-10, which leads us to a theoretical 10-50 TPS per zkApp group.
+By splitting the contract between several contracts or zkApps, in some cases (for example, by deploying the separate contract for each trading pair in DEX), it will be theoretically possible to multiply this rate by some coefficient in the range of 2-10, which leads us to a theoretical 10-50 TPS per zkApp group.
 
-**This rate, although hard to achieve in real-life systems due to non-blockchain software, CPU, memory, and network issues, is very important because it is comparable with rates for many non-blockchain software systems and, therefore, having such a high TPS rate eliminates the barrier for Mina blockchain adoption**
+**This rate, although hard to achieve in real-life systems due to non-blockchain software, CPU, memory, and network issues, is very important because it is comparable with rates for many non-blockchain software systems and, therefore, having such a high TPS rate eliminates the barrier for Mina protocol adoption**
 
 ## Scenarios and Use Cases
 
@@ -356,13 +359,28 @@ The delay between the last vote and the guaranteed state reception can be 1-2 mi
 ## Open Issues and Discussion Points
 
 - The calculation and verification of any proof takes some time, and the previous transaction can be included in the block at that time, so the replacement transaction will fail. There will be needed a mechanism for automatic increase of the nonce in this case to be able to send this transaction as new or other ways how to handle this situation.
-- To act in the most efficient way, the node should support parallel processing or even running on the cluster. This requirement is optional but recommended for high-performant blockspace.
-- How actions and events should be handled in blockspace. As handling actions and events is not the part of the role of regular node, it should be considered during research phase.
-- Pool and block algorithms must be analyzed during the research phase to find the most efficient way to build and verify compound transactions. Although the most direct way to build compound transactions is putting all AccountUpdates from several transactions, we’re putting too many AccountUpdates as a result into one transaction, and alternative ways should be discovered. This will have an effect on the BlockSpace fee structure, too.
+- To act in the most efficient way, the node should support parallel processing or even be running on the cluster or server+serverless environment. This requirement is optional but recommended for high-performant blockspace.
+- It is not clear how actions and events should be handled in blockspace. As handling actions and events is not the role of a regular node, it should be considered during the research phase.
+- Transaction Pool and block creation algorithms must be analyzed during the research phase to find the most efficient way to build and verify compound transactions. Although the most direct way to build compound transactions is putting all AccountUpdates from several transactions, we’re putting too many AccountUpdates as a result into one transaction, and alternative ways should be discovered. This will have an effect on the BlockSpace fee structure, too.
 
-According to the [zkApp MIP 2](https://github.com/bkase/MIPs/blob/66c60c48bc4d0710202f7573765ad526ca74905a/MIPS/mip-zkapps.md)
+According to the [zkApp MIP 2](https://github.com/bkase/MIPs/blob/66c60c48bc4d0710202f7573765ad526ca74905a/MIPS/mip-zkapps.md):
 
-The size heuristic involves three limits: a limit on the number of field elements in actions, a limit on the number of field elements in events, and a limit on the cost of the account updates. These three limits are fixed numbers in the protocol. The cost of the account updates is calculated from the number of proofs and signatures contained in them, subject to a grouping used to minimize the number of SNARKs needed to prove the transaction. That grouping sometimes pairs signatures as one element contributing to the cost. The number of proofs, signatures, and signature pairs are multiplied by factors determined empirically to yield a valid cost metric.
+The size heuristic involves three limits: a limit on the number of field elements in actions, a limit on the number of field elements in events, and a limit on the cost of the account updates. These three limits are fixed numbers in the protocol. The cost of the account updates is calculated from the number of proofs and signatures contained in them, subject to a grouping used to minimize the number of SNARKs needed to prove the transaction. That grouping sometimes pairs signatures as one element contributing to the cost. The number of proofs, signatures, and signature pairs are multiplied by factors determined empirically to yield a valid cost metric. These limits are subject to be tuned during the incentivized testnet if this MIP passes, but in the prototype are set to any set of account updates that satisfies this equation:
+
+```
+  np := proof account updates
+  n2 := signedPair account updates
+  n1 := signedSingle account updates
+
+  formula used to calculate how expensive a zkapp transaction is
+  10.26*np + 10.08*n2 + 9.14*n1 < 69.45
+```
+
+The transaction pool maintains a queue of pending transactions for each fee payer, and checks the applicability of transactions considering nonces and balances, before accepting transactions into the pool.
+
+If added to the pool, zkApp transactions are selected according to fee, just as for payments and delegations.
+
+...
 
 Proofs inside of account updates are checked when zkApp transactions are added to the transaction pool against some known potential future verification key as described in Mitigation of Attack 2: Verification Key Superposition. When a block is created, the proofs are not re-checked because they were already checked when added to the pool. When a block is received, all checks required to verify that the sender hasn't manipulated the payload are re-verified, but the proof is not explicitly checked in all cases.
 
@@ -372,4 +390,4 @@ To keep the transaction pool simple, only fee payers of zkApp transactions are c
 
 ## Conclusion
 
-Fast transaction capabilities in Mina protocol and o1js mark a significant advancement in developer and user experience, potentially catalyzing the adoption and growth of the Mina ecosystem and can greatly enhance the blockchain's Total Value Locked (TVL).
+Fast transaction capabilities in Mina protocol and o1js mark a significant advancement in developer and user experience, potentially catalyzing the adoption and growth of the Mina ecosystem and can significantly increase the blockchain's Total Value Locked (TVL).
