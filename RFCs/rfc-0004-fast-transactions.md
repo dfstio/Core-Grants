@@ -98,6 +98,8 @@ Current approaches to multiple transactions within a block include:
 
 These methods, especially recursive proofs, pose significant entry barriers due to complexity and infrastructure demands.
 
+It also should be noted that there is a limit of about 120 zkApp transactions per block, which is shared between all zkApps. Therefore, even if zkApp can send many transactions per block using stateless contracts and nonce increases, it will compete with other zkApps for the limited space in the block. This RFC aims to shift this limit for zkApp by using compound transactions.
+
 ## Specification
 
 ### Blockspace
