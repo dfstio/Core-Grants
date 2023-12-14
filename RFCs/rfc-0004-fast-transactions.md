@@ -177,6 +177,49 @@ The calculated state is not guaranteed and can be considered simply as one of th
 
 The calculated state will become a guaranteed state in an optimistic sense and, later, a final state in an optimistic sense.
 
+### Creating and verifying compound transactions.
+
+There are several ways we can create and verify compound transactions.
+
+The most obvious, but hardly feasible way would be to put all AccountUpdates from two transactions to the compound transaction. If we repeat this operation many times, it can lead us to the transaction with 100 AccountUpdates that will require significant time for proof verification and will take a lot of memory in the mempool.
+
+Currently, performance and memory issues are already the bottleneck in the mempool management and block creation, and various techniques are being used:
+
+- Limiting the [number of AccountUpdates that can be included in one transaction](https://github.com/bkase/MIPs/blob/66c60c48bc4d0710202f7573765ad526ca74905a/MIPS/mip-zkapps.md)
+- Limiting the [number of zkApp commands in the block](https://github.com/MinaProtocol/mina/blob/develop/rfcs/0054-limit-zkapp-cmds-per-block.md)
+- Skipping proof verifications after the transaction has been added to the transaction pool
+
+I’ve also noticed that the probability of seeing the 10-minute interval instead of the 3-minute interval between blocks is higher when I send many zkApp transactions to the same block on TetstWorld2.
+
+According to the [zkApp MIP 2](https://github.com/bkase/MIPs/blob/66c60c48bc4d0710202f7573765ad526ca74905a/MIPS/mip-zkapps.md):
+
+The size heuristic involves three limits: a limit on the number of field elements in actions, a limit on the number of field elements in events, and a limit on the cost of the account updates. These three limits are fixed numbers in the protocol. The cost of the account updates is calculated from the number of proofs and signatures contained in them, subject to a grouping used to minimize the number of SNARKs needed to prove the transaction. That grouping sometimes pairs signatures as one element contributing to the cost. The number of proofs, signatures, and signature pairs are multiplied by factors determined empirically to yield a valid cost metric. These limits are subject to be tuned during the incentivized testnet if this MIP passes, but in the prototype are set to any set of account updates that satisfies this equation:
+
+```
+  np := proof account updates
+  n2 := signedPair account updates
+  n1 := signedSingle account updates
+
+  formula used to calculate how expensive a zkapp transaction is
+  10.26*np + 10.08*n2 + 9.14*n1 < 69.45
+```
+
+The transaction pool maintains a queue of pending transactions for each fee payer, and checks the applicability of transactions considering nonces and balances, before accepting transactions into the pool.
+
+If added to the pool, zkApp transactions are selected according to fee, just as for payments and delegations.
+
+...
+
+Proofs inside of account updates are checked when zkApp transactions are added to the transaction pool against some known potential future verification key as described in Mitigation of Attack 2: Verification Key Superposition. **When a block is created, the proofs are not re-checked because they were already checked when added to the pool.** When a block is received, all checks required to verify that the sender hasn't manipulated the payload are re-verified, but the proof is not explicitly checked in all cases.
+
+Transaction pool
+
+To keep the transaction pool simple, only fee payers of zkApp transactions are checked for balance and nonce validity. Signatures and proofs of all account updates must be verified before adding a zkApp transaction to the pool. This introduces an additional snark verification step in the transaction pool which until now checked only signatures. **After verified in the pool, the proofs are assumed to be valid during block creation and don't require checking again, similar to signatures for signed commands. Proofs within a transaction and across multiple transactions can be batched to make the verification step slightly more efficient.** Failing batch verification involves additional verification to identify the faulty proof or transaction and so, worst case each transaction are actually a bit slower. Additionally, hashing zkApp transactions impact the pool's performance. Care should be taken to hash a transaction only once and use it everywhere in the pool and throughout the protocol.
+
+The better way would be to prepare the compound transaction in the BlockSpace node.
+
+BlockSpace node can use parallel/serverless processing to verify the AccountUpdate proofs and create a proof for the compound transaction, or it can outsource proof creation to the Snarketplace to use third-party SNARK workers. In this way, the number of AccountUpdates in the compound transaction will be the same or almost the same as in the usual transaction.
+
 ## How it works
 
 ### **Simple example**
@@ -212,11 +255,13 @@ interface  BlockSpaceOptions {
   isEnabled?: boolean;
   commitMode?: 'immediate' | 'lazy' | 'manual';
   lazyCommitInterval?: number;
+  commitFeePayer: PrivateKey;
 }
 
 const blockspaceOptions : BlockSpaceOptions = {
     isEnabled: true,
     commitMode: 'manual',
+    commitFeePayer: deployerPrivateKey
 }
 
 const network = Mina.Network({
@@ -363,32 +408,7 @@ The delay between the last vote and the guaranteed state reception can be 1-2 mi
 - The calculation and verification of any proof takes some time, and the previous transaction can be included in the block at that time, so the replacement transaction will fail. There will be needed a mechanism for automatic increase of the nonce in this case to be able to send this transaction as new or other ways how to handle this situation.
 - To act in the most efficient way, the node should support parallel processing or even be running on the cluster or server+serverless environment. This requirement is optional but recommended for high-performant blockspace.
 - It is not clear how actions and events should be handled in blockspace. As handling actions and events is not the role of a regular node, it should be considered during the research phase.
-- Transaction Pool and block creation algorithms must be analyzed during the research phase to find the most efficient way to build and verify compound transactions. Although the most direct way to build compound transactions is putting all AccountUpdates from several transactions, we’re putting too many AccountUpdates as a result into one transaction, and alternative ways should be discovered. One of the possible solutions is to prepare SNARK work for the compound transaction on its inclusion in the mempool. This will also affect the BlockSpace fee structure and can require a deposit from the zkApp to the BlockSpace node in some cases to offset SNARK work fee.
-
-According to the [zkApp MIP 2](https://github.com/bkase/MIPs/blob/66c60c48bc4d0710202f7573765ad526ca74905a/MIPS/mip-zkapps.md):
-
-The size heuristic involves three limits: a limit on the number of field elements in actions, a limit on the number of field elements in events, and a limit on the cost of the account updates. These three limits are fixed numbers in the protocol. The cost of the account updates is calculated from the number of proofs and signatures contained in them, subject to a grouping used to minimize the number of SNARKs needed to prove the transaction. That grouping sometimes pairs signatures as one element contributing to the cost. The number of proofs, signatures, and signature pairs are multiplied by factors determined empirically to yield a valid cost metric. These limits are subject to be tuned during the incentivized testnet if this MIP passes, but in the prototype are set to any set of account updates that satisfies this equation:
-
-```
-  np := proof account updates
-  n2 := signedPair account updates
-  n1 := signedSingle account updates
-
-  formula used to calculate how expensive a zkapp transaction is
-  10.26*np + 10.08*n2 + 9.14*n1 < 69.45
-```
-
-The transaction pool maintains a queue of pending transactions for each fee payer, and checks the applicability of transactions considering nonces and balances, before accepting transactions into the pool.
-
-If added to the pool, zkApp transactions are selected according to fee, just as for payments and delegations.
-
-...
-
-Proofs inside of account updates are checked when zkApp transactions are added to the transaction pool against some known potential future verification key as described in Mitigation of Attack 2: Verification Key Superposition. When a block is created, the proofs are not re-checked because they were already checked when added to the pool. When a block is received, all checks required to verify that the sender hasn't manipulated the payload are re-verified, but the proof is not explicitly checked in all cases.
-
-Transaction pool
-
-To keep the transaction pool simple, only fee payers of zkApp transactions are checked for balance and nonce validity. Signatures and proofs of all account updates must be verified before adding a zkApp transaction to the pool. This introduces an additional snark verification step in the transaction pool which until now checked only signatures. **After verified in the pool, the proofs are assumed to be valid during block creation and don't require checking again, similar to signatures for signed commands. Proofs within a transaction and across multiple transactions can be batched to make the verification step slightly more efficient.** Failing batch verification involves additional verification to identify the faulty proof or transaction and so, worst case each transaction are actually a bit slower. Additionally, hashing zkApp transactions impact the pool's performance. Care should be taken to hash a transaction only once and use it everywhere in the pool and throughout the protocol.
+- Transaction Pool and block creation algorithms must be analyzed during the research phase to find the most efficient way to build and verify compound transactions. This will also affect the BlockSpace fee structure and can require a deposit from the zkApp to the BlockSpace node in some cases to offset SNARK work fee.
 
 ## Conclusion
 
