@@ -177,7 +177,7 @@ The calculated state is not guaranteed and can be considered simply as one of th
 
 The calculated state will become a guaranteed state in an optimistic sense and, later, a final state in an optimistic sense.
 
-### Creating and verifying compound transactions.
+### Creating and verifying compound transactions
 
 There are several ways we can create and verify compound transactions.
 
@@ -189,11 +189,11 @@ Currently, performance and memory issues are already the bottleneck in the mempo
 - Limiting the [number of zkApp commands in the block](https://github.com/MinaProtocol/mina/blob/develop/rfcs/0054-limit-zkapp-cmds-per-block.md)
 - Skipping proof verifications after the transaction has been added to the transaction pool
 
-I’ve also noticed that the probability of seeing the 10-minute interval instead of the 3-minute interval between blocks is higher when I send many zkApp transactions to the same block on TetstWorld2.
+I’ve also noticed that the probability of seeing the 10-minute interval instead of the 3-minute interval between blocks is higher when I send many zkApp transactions to the same block on TestWorld2.
 
 According to the [zkApp MIP 2](https://github.com/bkase/MIPs/blob/66c60c48bc4d0710202f7573765ad526ca74905a/MIPS/mip-zkapps.md):
 
-The size heuristic involves three limits: a limit on the number of field elements in actions, a limit on the number of field elements in events, and a limit on the cost of the account updates. These three limits are fixed numbers in the protocol. The cost of the account updates is calculated from the number of proofs and signatures contained in them, subject to a grouping used to minimize the number of SNARKs needed to prove the transaction. That grouping sometimes pairs signatures as one element contributing to the cost. The number of proofs, signatures, and signature pairs are multiplied by factors determined empirically to yield a valid cost metric. These limits are subject to be tuned during the incentivized testnet if this MIP passes, but in the prototype are set to any set of account updates that satisfies this equation:
+"The size heuristic involves three limits: a limit on the number of field elements in actions, a limit on the number of field elements in events, and a limit on the cost of the account updates. These three limits are fixed numbers in the protocol. The cost of the account updates is calculated from the number of proofs and signatures contained in them, subject to a grouping used to minimize the number of SNARKs needed to prove the transaction. That grouping sometimes pairs signatures as one element contributing to the cost. The number of proofs, signatures, and signature pairs are multiplied by factors determined empirically to yield a valid cost metric. These limits are subject to be tuned during the incentivized testnet if this MIP passes, but in the prototype are set to any set of account updates that satisfies this equation:
 
 ```
   np := proof account updates
@@ -214,7 +214,7 @@ Proofs inside of account updates are checked when zkApp transactions are added t
 
 Transaction pool
 
-To keep the transaction pool simple, only fee payers of zkApp transactions are checked for balance and nonce validity. Signatures and proofs of all account updates must be verified before adding a zkApp transaction to the pool. This introduces an additional snark verification step in the transaction pool which until now checked only signatures. **After verified in the pool, the proofs are assumed to be valid during block creation and don't require checking again, similar to signatures for signed commands. Proofs within a transaction and across multiple transactions can be batched to make the verification step slightly more efficient.** Failing batch verification involves additional verification to identify the faulty proof or transaction and so, worst case each transaction are actually a bit slower. Additionally, hashing zkApp transactions impact the pool's performance. Care should be taken to hash a transaction only once and use it everywhere in the pool and throughout the protocol.
+To keep the transaction pool simple, only fee payers of zkApp transactions are checked for balance and nonce validity. Signatures and proofs of all account updates must be verified before adding a zkApp transaction to the pool. This introduces an additional snark verification step in the transaction pool which until now checked only signatures. **After verified in the pool, the proofs are assumed to be valid during block creation and don't require checking again, similar to signatures for signed commands. Proofs within a transaction and across multiple transactions can be batched to make the verification step slightly more efficient.** Failing batch verification involves additional verification to identify the faulty proof or transaction and so, worst case each transaction are actually a bit slower. Additionally, hashing zkApp transactions impact the pool's performance. Care should be taken to hash a transaction only once and use it everywhere in the pool and throughout the protocol."
 
 The better way would be to prepare the compound transaction in the BlockSpace node.
 
